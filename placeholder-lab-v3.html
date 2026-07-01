@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Print Lab — Placeholder Image Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0a0b0f;
+    --amber: #ff9451;
+    --amber-dim: #c9713a;
+    --amber-glow: rgba(255,148,81,0.22);
+    --cyan-glow: rgba(80,180,255,0.14);
+    --text-primary: #f3f0ea;
+    --text-secondary: #a7a9b4;
+    --text-tertiary: #686b78;
+    --glass: rgba(255,255,255,0.045);
+    --glass-strong: rgba(255,255,255,0.08);
+    --glass-border: rgba(255,255,255,0.09);
+    --glass-border-strong: rgba(255,255,255,0.16);
+    --paper: #efe8da;
+    --radius: 14px;
+    --font-display: 'Fraunces', 'Noto Sans Bengali', serif;
+    --font-body: 'Space Grotesk', 'Noto Sans Bengali', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+
+  *{ box-sizing: border-box; }
+  html,body{ height:100%; }
+
+  body{
+    margin:0;
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    position: relative;
+    overflow: hidden;
+  }
+
+  @media (max-height: 760px), (max-width: 860px){
+    body{ overflow-y: auto; height:auto; min-height:100%; }
+  }
+
+  .blob{ position: fixed; border-radius: 50%; filter: blur(90px); z-index: 0; pointer-events:none; }
+  .blob-1{ width: 480px; height: 480px; top: -180px; left: -120px; background: var(--amber-glow); }
+  .blob-2{ width: 420px; height: 420px; bottom: -160px; right: -100px; background: var(--cyan-glow); }
+  .blob-3{ width: 320px; height: 320px; top: 40%; left: 55%; background: rgba(140,100,255,0.10); }
+
+  body::before{
+    content:"";
+    position: fixed; inset:0;
+    pointer-events:none;
+    opacity: 0.045;
+    z-index: 999;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .frame{
+    position: relative;
+    z-index: 1;
+    max-width: 1080px;
+    height: 100vh;
+    margin: 0 auto;
+    padding: 20px 24px;
+    display:flex;
+    flex-direction:column;
+  }
+  @media (max-height: 760px), (max-width: 860px){
+    .frame{ height:auto; min-height:100vh; padding: 24px 20px 50px; }
+  }
+
+  header.masthead{
+    display:flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 14px;
+    flex-shrink:0;
+  }
+  header.masthead .brand-mark{ display:flex; align-items:center; gap: 10px; }
+  .lens-icon{
+    width: 28px; height:28px;
+    border-radius:50%;
+    border: 1.5px solid var(--amber);
+    display:flex; align-items:center; justify-content:center;
+    box-shadow: 0 0 16px var(--amber-glow);
+    flex-shrink:0;
+  }
+  .lens-icon::after{ content:""; width:10px; height:10px; border-radius:50%; background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+  h1{ font-family: var(--font-display); font-weight: 500; font-size: 21px; letter-spacing: 0.01em; margin:0; line-height:1.1; }
+  .tagline{ font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.13em; text-transform: uppercase; color: var(--text-tertiary); margin-top: 2px; }
+  .frame-counter{ font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); text-align:right; line-height: 1.5; }
+  .frame-counter span{ color: var(--amber); }
+
+  .glass{
+    background: var(--glass);
+    backdrop-filter: blur(22px) saturate(140%);
+    -webkit-backdrop-filter: blur(22px) saturate(140%);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius);
+    box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset, 0 20px 40px -24px rgba(0,0,0,0.6);
+    position: relative;
+  }
+
+  /* ---- main work area: two columns, no page scroll ---- */
+  .workspace{
+    flex: 1;
+    display:grid;
+    grid-template-columns: 340px 1fr;
+    gap: 16px;
+    min-height: 0;
+  }
+  @media (max-width: 860px){
+    .workspace{ grid-template-columns: 1fr; height:auto; }
+  }
+
+  .controls-col{
+    display:flex;
+    flex-direction:column;
+    gap: 12px;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 2px;
+  }
+  .controls-col::-webkit-scrollbar{ width:5px; }
+  .controls-col::-webkit-scrollbar-thumb{ background: var(--glass-border-strong); border-radius:4px; }
+
+  .panel{ padding: 15px 16px; flex-shrink:0; }
+  .panel-tab{
+    font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.13em; color: var(--amber-dim);
+    text-transform: uppercase; margin-bottom: 12px; display:flex; align-items:center; gap:7px;
+  }
+  .panel-tab::before{ content:""; width:5px; height:5px; border-radius:50%; background: var(--amber-dim); }
+
+  .dim-row{ margin-bottom: 12px; }
+  .dim-row:last-child{ margin-bottom:0; }
+  .dim-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom: 6px; }
+  .dim-head label{ font-size: 11px; color: var(--text-secondary); font-family: var(--font-mono); letter-spacing: 0.04em; }
+  .dim-input{ display:flex; align-items:center; gap:4px; }
+  .dim-input input[type="number"]{
+    width: 58px; background: rgba(0,0,0,0.25); border: 1px solid var(--glass-border); color: var(--amber);
+    font-family: var(--font-mono); font-size: 12px; font-weight: 600; padding: 4px 6px; border-radius: 6px;
+    text-align:right; -moz-appearance: textfield;
+  }
+  .dim-input input[type="number"]::-webkit-outer-spin-button, .dim-input input[type="number"]::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+  .dim-input input[type="number"]:focus{ border-color: var(--amber-dim); outline:none; }
+  .dim-input .unit{ font-family: var(--font-mono); font-size: 10.5px; color: var(--text-tertiary); }
+
+  input[type="range"]{
+    -webkit-appearance:none; appearance:none; width:100%; height: 3px;
+    background: rgba(255,255,255,0.12); outline:none; border-radius: 2px;
+  }
+  input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none; width: 14px; height: 14px; border-radius:50%; background: var(--amber);
+    cursor:pointer; box-shadow: 0 0 0 4px var(--amber-glow); border: 2px solid #1a1108;
+  }
+  input[type="range"]::-moz-range-thumb{ width: 14px; height: 14px; border-radius:50%; background: var(--amber); cursor:pointer; border: 2px solid #1a1108; }
+
+  .chip-row{ display:flex; flex-wrap:wrap; gap:5px; margin-top: 12px; }
+  .chip{
+    font-family: var(--font-mono); font-size: 10px; padding: 4px 9px; background: var(--glass-strong);
+    border: 1px solid var(--glass-border); color: var(--text-secondary); border-radius: 20px; cursor:pointer;
+    transition: all .15s ease; letter-spacing: 0.02em; backdrop-filter: blur(8px);
+  }
+  .chip:hover{ border-color: var(--amber-dim); color: var(--amber); background: rgba(255,148,81,0.08); }
+
+  .color-block{ flex:1; }
+  .color-block label{ display:block; font-size: 10.5px; color: var(--text-tertiary); margin-bottom: 6px; font-family: var(--font-mono); letter-spacing: 0.05em; }
+  .swatch-input{ display:flex; align-items:center; gap:6px; }
+  input[type="color"]{
+    -webkit-appearance:none; width: 32px; height: 28px; border: 1px solid var(--glass-border-strong);
+    border-radius: 7px; padding: 0; cursor:pointer; background: none;
+  }
+  input[type="color"]::-webkit-color-swatch-wrapper{ padding:2px; }
+  input[type="color"]::-webkit-color-swatch{ border:none; border-radius:5px; }
+
+  input[type="text"]{
+    background: rgba(0,0,0,0.25); border: 1px solid var(--glass-border); color: var(--text-primary);
+    font-family: var(--font-mono); font-size: 12px; padding: 7px 9px; border-radius: 8px; outline:none; width:100%;
+  }
+  input[type="text"]:focus{ border-color: var(--amber-dim); }
+  .hex-input{ width: 66px !important; }
+
+  .row-colors{ display:flex; gap:10px; margin-bottom: 10px; }
+
+  .swatch-quick{ display:flex; flex-wrap:wrap; gap:5px; margin-top:10px; }
+  .dot{ width:19px; height:19px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.18); cursor:pointer; transition: transform .15s ease; }
+  .dot:hover{ transform: scale(1.2); }
+
+  .text-grid{ display:grid; grid-template-columns: 1fr 110px; gap: 10px; }
+  .field label{ display:block; font-size: 10.5px; color: var(--text-tertiary); margin-bottom: 5px; font-family: var(--font-mono); letter-spacing: 0.05em; }
+  select{
+    background: rgba(0,0,0,0.25); border: 1px solid var(--glass-border); color: var(--text-primary);
+    font-family: var(--font-mono); font-size: 12px; padding: 7px 8px; border-radius: 8px; outline:none; width:100%;
+  }
+
+  /* ---- right column: preview + url strip below it ---- */
+  .preview-col{ display:flex; flex-direction:column; min-height:0; gap:12px; }
+
+  .developing{
+    flex:1;
+    display:flex; align-items:center; justify-content:center;
+    padding: 8px; min-height:0;
+  }
+  .print{
+    background: var(--paper);
+    padding: 12px 12px 30px;
+    box-shadow: 0 30px 60px -20px rgba(0,0,0,0.65), 0 10px 20px -8px rgba(0,0,0,0.4);
+    max-width: 100%; max-height:100%;
+    display:flex; flex-direction:column; align-items:center;
+    transform: rotate(-0.5deg);
+    border-radius: 4px;
+  }
+  .print img{ display:block; max-width: 100%; max-height: 40vh; object-fit:contain; border: 1px solid rgba(0,0,0,0.08); }
+  .print-caption{ font-family: var(--font-mono); font-size: 10px; color: #6b6152; text-align:center; margin-top: 10px; letter-spacing: 0.06em; }
+
+  .strip{ padding: 14px 16px; flex-shrink:0; }
+  .strip-label{
+    font-family: var(--font-mono); font-size: 9.5px; letter-spacing:0.15em; text-transform:uppercase;
+    color: var(--amber); margin-bottom: 10px; display:flex; align-items:center; gap:7px;
+  }
+  .strip-label::before{ content:""; width:5px; height:5px; border-radius:50%; background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+  .url-row{ display:flex; gap:8px; align-items:center; flex-wrap: wrap; }
+  #url{
+    flex:1; min-width: 160px; background: rgba(0,0,0,0.28); border: 1px solid var(--glass-border);
+    color: var(--text-primary); font-family: var(--font-mono); font-size: 12px; padding: 10px 12px; border-radius: 10px;
+  }
+  .icon-btn, .btn-primary{
+    font-family: var(--font-mono); font-size: 11.5px; letter-spacing: 0.04em; padding: 10px 15px; border-radius: 10px;
+    cursor:pointer; white-space:nowrap; border: 1px solid var(--glass-border-strong); background: var(--glass-strong);
+    color: var(--text-primary); transition: all .18s ease; text-decoration:none; display:inline-flex; align-items:center; gap:6px;
+    backdrop-filter: blur(10px);
+  }
+  .icon-btn:hover{ border-color: var(--amber-dim); color:var(--amber); background: rgba(255,148,81,0.08); }
+  .btn-primary{
+    background: linear-gradient(135deg, var(--amber), #ffb072); color: #201105; border-color: transparent;
+    font-weight: 600; box-shadow: 0 8px 22px -8px var(--amber-glow);
+  }
+  .btn-primary:hover{ filter: brightness(1.08); transform: translateY(-1px); }
+
+  footer{
+    text-align:center; font-family: var(--font-mono); font-size: 10px; color: var(--text-tertiary);
+    padding-top: 12px; letter-spacing: 0.05em; flex-shrink:0;
+  }
+  footer .amber-word{ color: var(--amber-dim); }
+</style>
+</head>
+<body>
+
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+<div class="blob blob-3"></div>
+
+<div class="frame">
+
+  <header class="masthead">
+    <div class="brand-mark">
+      <div class="lens-icon"></div>
+      <div>
+        <h1>Print Lab</h1>
+        <div class="tagline">Placeholder Image Developer</div>
+      </div>
+    </div>
+    <div class="frame-counter">
+      SOURCE <span>placehold.co</span><br>
+      FORMAT <span id="counterFmt">PNG</span>
+    </div>
+  </header>
+
+  <div class="workspace">
+
+    <!-- LEFT: all controls, scrolls internally only if needed -->
+    <div class="controls-col">
+
+      <div class="glass panel">
+        <div class="panel-tab">সাইজ · dimensions</div>
+        <div class="dim-row">
+          <div class="dim-head">
+            <label>Width</label>
+            <div class="dim-input">
+              <input type="number" id="wNum" min="10" max="4000" value="300" oninput="syncFromNumber('w')">
+              <span class="unit">px</span>
+            </div>
+          </div>
+          <input type="range" id="w" min="50" max="1200" step="10" value="300" oninput="syncFromSlider('w')">
+        </div>
+        <div class="dim-row">
+          <div class="dim-head">
+            <label>Height</label>
+            <div class="dim-input">
+              <input type="number" id="hNum" min="10" max="4000" value="200" oninput="syncFromNumber('h')">
+              <span class="unit">px</span>
+            </div>
+          </div>
+          <input type="range" id="h" min="50" max="900" step="10" value="200" oninput="syncFromSlider('h')">
+        </div>
+        <div class="chip-row">
+          <span class="chip" onclick="setSize(300,200)">300×200</span>
+          <span class="chip" onclick="setSize(400,300)">400×300</span>
+          <span class="chip" onclick="setSize(600,400)">600×400</span>
+          <span class="chip" onclick="setSize(800,600)">800×600</span>
+          <span class="chip" onclick="setSize(1200,628)">OG 1200×628</span>
+          <span class="chip" onclick="setSize(150,150)">150×150</span>
+        </div>
+      </div>
+
+      <div class="glass panel">
+        <div class="panel-tab">রং · tone</div>
+        <div class="row-colors">
+          <div class="color-block">
+            <label>Background</label>
+            <div class="swatch-input">
+              <input type="color" id="bg" value="#0dcaf0" oninput="document.getElementById('bgHex').value=this.value.slice(1); update()">
+              <span style="color:var(--text-tertiary); font-family:var(--font-mono); font-size:11px;">#</span>
+              <input type="text" id="bgHex" class="hex-input" value="0dcaf0" maxlength="6" oninput="syncColor('bg','bgHex')">
+            </div>
+          </div>
+          <div class="color-block">
+            <label>Text color</label>
+            <div class="swatch-input">
+              <input type="color" id="fg" value="#333333" oninput="document.getElementById('fgHex').value=this.value.slice(1); update()">
+              <span style="color:var(--text-tertiary); font-family:var(--font-mono); font-size:11px;">#</span>
+              <input type="text" id="fgHex" class="hex-input" value="333333" maxlength="6" oninput="syncColor('fg','fgHex')">
+            </div>
+          </div>
+        </div>
+        <div class="swatch-quick">
+          <span class="dot" style="background:#0d6efd" onclick="setColors('0d6efd','ffffff')" title="Blue"></span>
+          <span class="dot" style="background:#198754" onclick="setColors('198754','ffffff')" title="Green"></span>
+          <span class="dot" style="background:#dc3545" onclick="setColors('dc3545','ffffff')" title="Red"></span>
+          <span class="dot" style="background:#fd7e14" onclick="setColors('fd7e14','ffffff')" title="Orange"></span>
+          <span class="dot" style="background:#6f42c1" onclick="setColors('6f42c1','ffffff')" title="Purple"></span>
+          <span class="dot" style="background:#0dcaf0" onclick="setColors('0dcaf0','333333')" title="Cyan"></span>
+          <span class="dot" style="background:#ffc107" onclick="setColors('ffc107','333333')" title="Yellow"></span>
+          <span class="dot" style="background:#212529" onclick="setColors('212529','ffffff')" title="Dark"></span>
+          <span class="dot" style="background:#f8f9fa" onclick="setColors('f8f9fa','333333')" title="Light"></span>
+          <span class="dot" style="background:#e83e8c" onclick="setColors('e83e8c','ffffff')" title="Pink"></span>
+          <span class="dot" style="background:#20c997" onclick="setColors('20c997','ffffff')" title="Teal"></span>
+          <span class="dot" style="background:#6c757d" onclick="setColors('6c757d','ffffff')" title="Gray"></span>
+        </div>
+      </div>
+
+      <div class="glass panel">
+        <div class="panel-tab">লেখা ও ফরম্যাট · caption</div>
+        <div class="text-grid">
+          <div class="field">
+            <label>Text</label>
+            <input type="text" id="txt" value="Product 7" oninput="update()" placeholder="Image text">
+          </div>
+          <div class="field">
+            <label>Font</label>
+            <select id="font" onchange="update()">
+              <option value="">Default</option>
+              <option value="lato">Lato</option>
+              <option value="roboto">Roboto</option>
+              <option value="oswald">Oswald</option>
+              <option value="raleway">Raleway</option>
+              <option value="montserrat">Montserrat</option>
+              <option value="playfair+display">Playfair Display</option>
+            </select>
+          </div>
+        </div>
+        <div class="chip-row">
+          <span class="chip" onclick="setTxt('Product 1')">Product 1</span>
+          <span class="chip" onclick="setTxt('Hello World')">Hello World</span>
+          <span class="chip" onclick="setTxt('No Image')">No Image</span>
+          <span class="chip" onclick="setTxt('Thumbnail')">Thumbnail</span>
+          <span class="chip" onclick="setTxt('')">কোনো লেখা নেই</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT: preview on top, URL/copy strip below (original position) -->
+    <div class="preview-col">
+      <div class="developing">
+        <div class="print">
+          <img id="preview" src="" alt="preview">
+          <div class="print-caption" id="sizeBadge"></div>
+        </div>
+      </div>
+
+      <div class="glass strip">
+        <div class="strip-label">তৈরি হওয়া URL</div>
+        <div class="url-row">
+          <input type="text" id="url" readonly value="">
+          <button class="icon-btn" id="copyBtn" onclick="copyUrl()">কপি করুন</button>
+          <a class="btn-primary" id="openBtn" href="#" target="_blank">Open ↗</a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>developed in the <span class="amber-word">Print Lab</span> darkroom — powered by placehold.co</footer>
+
+</div>
+
+<script>
+function getVal(id) { return document.getElementById(id).value; }
+
+function update() {
+  var w = getVal('w'), h = getVal('h');
+  var bg = getVal('bgHex').replace('#','');
+  var fg = getVal('fgHex').replace('#','');
+  var txt = getVal('txt');
+  var font = getVal('font');
+
+  var url = 'https://placehold.co/' + w + 'x' + h + '/' + bg + '/' + fg;
+  if (font) url += '?font=' + font;
+  if (txt) {
+    url += (font ? '&' : '?') + 'text=' + encodeURIComponent(txt);
+  }
+
+  document.getElementById('url').value = url;
+  document.getElementById('preview').src = url;
+  document.getElementById('openBtn').href = url;
+  document.getElementById('sizeBadge').textContent = w + ' × ' + h + ' PX  ·  FRAME';
+}
+
+function syncFromSlider(axis) {
+  var slider = document.getElementById(axis);
+  var numInput = document.getElementById(axis + 'Num');
+  numInput.value = slider.value;
+  update();
+}
+
+function syncFromNumber(axis) {
+  var numInput = document.getElementById(axis + 'Num');
+  var slider = document.getElementById(axis);
+  var v = parseInt(numInput.value, 10);
+  if (isNaN(v)) return;
+  var min = parseInt(numInput.min, 10), max = parseInt(numInput.max, 10);
+  if (v < min) v = min;
+  if (v > max) v = max;
+  var sMin = parseInt(slider.min, 10), sMax = parseInt(slider.max, 10);
+  slider.value = Math.min(Math.max(v, sMin), sMax);
+  update();
+}
+
+function setSize(w, h) {
+  document.getElementById('w').value = w;
+  document.getElementById('h').value = h;
+  document.getElementById('wNum').value = w;
+  document.getElementById('hNum').value = h;
+  update();
+}
+
+function setColors(bg, fg) {
+  document.getElementById('bg').value = '#' + bg;
+  document.getElementById('bgHex').value = bg;
+  document.getElementById('fg').value = '#' + fg;
+  document.getElementById('fgHex').value = fg;
+  update();
+}
+
+function setTxt(t) {
+  document.getElementById('txt').value = t;
+  update();
+}
+
+function syncColor(pickerId, hexId) {
+  var hex = document.getElementById(hexId).value;
+  if (/^[0-9a-fA-F]{6}$/.test(hex)) {
+    document.getElementById(pickerId).value = '#' + hex;
+    update();
+  }
+}
+
+function copyUrl() {
+  var url = document.getElementById('url').value;
+  navigator.clipboard.writeText(url).then(function() {
+    var btn = document.getElementById('copyBtn');
+    var old = btn.textContent;
+    btn.textContent = 'কপি হয়েছে ✓';
+    setTimeout(function(){ btn.textContent = old; }, 2000);
+  });
+}
+
+update();
+</script>
+
+</body>
+</html>
